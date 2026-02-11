@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#MISE description="Capture a screenshot"
+#USAGE flag "-o --output <path>" help="Output file path" default="screenshot.png"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+CALLER_DIR="${BUTTHAIR_CALLER_PWD:-$(pwd)}"
+OUTPUT="${usage_output}"
+
+# Resolve relative paths to caller's directory
+if [[ "$OUTPUT" != /* ]]; then
+    OUTPUT="${CALLER_DIR}/${OUTPUT}"
+fi
+
+# Determine format from extension
+EXT="${OUTPUT##*.}"
+case "$EXT" in
+    jpg|jpeg) METHOD="shotAsJPG" ;;
+    *)        METHOD="shotAsPNG" ;;
+esac
+
+RESULT=$(hs_run "hs.screen.mainScreen():${METHOD}([[${OUTPUT}]]); return [[ok]]")
+if [ "$RESULT" = "ok" ]; then
+    echo "$OUTPUT"
+else
+    echo "error: screenshot failed" >&2
+    exit 1
+fi

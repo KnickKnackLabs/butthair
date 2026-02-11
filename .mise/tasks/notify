@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#MISE description="Send a system notification"
+#USAGE arg "<title>" help="Notification title"
+#USAGE arg "[message]" help="Notification message"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+TITLE="${usage_title}"
+MESSAGE="${usage_message:-}"
+
+hs_run "hs.notify.show([[${TITLE}]], [[]], [[${MESSAGE}]]); return [[ok]]" > /dev/null

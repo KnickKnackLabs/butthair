@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#MISE description="List all windows"
+#USAGE flag "-j --json" help="Output as JSON"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+if [ "${usage_json:-false}" = "true" ]; then
+    hs_run '
+local result = {}
+for _, win in ipairs(hs.window.allWindows()) do
+    local app = win:application()
+    local f = win:frame()
+    result[#result+1] = {
+        id = win:id(),
+        app = app and app:title() or "",
+        title = win:title() or "",
+        x = f.x, y = f.y, w = f.w, h = f.h,
+        visible = win:isVisible()
+    }
+end
+return hs.json.encode(result)
+'
+else
+    hs_run '
+local lines = {}
+for _, win in ipairs(hs.window.allWindows()) do
+    local app = win:application()
+    local f = win:frame()
+    lines[#lines+1] = string.format("%-25s %-45s %d,%d %dx%d",
+        app and app:title() or "",
+        win:title() or "",
+        f.x, f.y, f.w, f.h)
+end
+return table.concat(lines, "\n")
+'
+fi
