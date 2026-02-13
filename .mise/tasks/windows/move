@@ -13,10 +13,15 @@ source "$TASKS_DIR/_hs"
 hs_check
 
 APP="${usage_app:?app name required}"
+hs_validate_app "$APP"
 X="${usage_x:-}"
 Y="${usage_y:-}"
 W="${usage_width:-}"
 H="${usage_height:-}"
+[ -n "$X" ] && hs_validate_num "$X"
+[ -n "$Y" ] && hs_validate_num "$Y"
+[ -n "$W" ] && hs_validate_num "$W"
+[ -n "$H" ] && hs_validate_num "$H"
 
 hs_run "
 local app = hs.application.get('$APP')

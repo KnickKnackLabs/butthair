@@ -9,6 +9,7 @@ source "$TASKS_DIR/_hs"
 hs_check
 
 INDEX="${usage_index:?space index required}"
+hs_validate_num "$INDEX"
 
 hs_run "
 local screen = hs.screen.mainScreen()
