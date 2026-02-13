@@ -15,6 +15,29 @@ hs_check() {
     fi
 }
 
+# Validate an app name is safe to interpolate into Lua
+hs_validate_app() {
+    if ! echo "$1" | grep -qE '^[a-zA-Z0-9 ._-]+$'; then
+        echo "error: invalid app name: $1" >&2
+        exit 1
+    fi
+}
+
+# Validate a value is a number (integer)
+hs_validate_num() {
+    if ! echo "$1" | grep -qE '^-?[0-9]+$'; then
+        echo "error: expected number, got: $1" >&2
+        exit 1
+    fi
+}
+
 hs_run() {
-    "$HS_CLI" -c "$1" 2>/dev/null
+    local _hs_err
+    _hs_err=$(mktemp)
+    "$HS_CLI" -c "$1" 2>"$_hs_err"
+    local _hs_rc=$?
+    # Filter out noisy extension loading lines, surface real errors
+    sed '/^-- Loading extension: /d; /^-- Loading ~/d' "$_hs_err" >&2
+    rm -f "$_hs_err"
+    return $_hs_rc
 }

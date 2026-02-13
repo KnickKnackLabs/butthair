@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+#MISE description="Move/resize a window by app name"
+#USAGE arg "app" help="Application name (e.g. Safari, Ghostty)"
+#USAGE flag "--x <x>" help="X position"
+#USAGE flag "--y <y>" help="Y position"
+#USAGE flag "--width <w>" help="Width"
+#USAGE flag "--height <h>" help="Height"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+APP="${usage_app:?app name required}"
+hs_validate_app "$APP"
+X="${usage_x:-}"
+Y="${usage_y:-}"
+W="${usage_width:-}"
+H="${usage_height:-}"
+[ -n "$X" ] && hs_validate_num "$X"
+[ -n "$Y" ] && hs_validate_num "$Y"
+[ -n "$W" ] && hs_validate_num "$W"
+[ -n "$H" ] && hs_validate_num "$H"
+
+hs_run "
+local app = hs.application.get('$APP')
+if not app then return 'error: app not found: $APP' end
+local win = app:mainWindow()
+if not win then return 'error: no window for: $APP' end
+local f = win:frame()
+local x = ${X:-f.x}
+local y = ${Y:-f.y}
+local w = ${W:-f.w}
+local h = ${H:-f.h}
+win:setFrame(hs.geometry.rect(x, y, w, h))
+hs.timer.usleep(200000)
+local after = win:frame()
+print(string.format('%s: x=%d y=%d w=%d h=%d', '$APP', after.x, after.y, after.w, after.h))
+"

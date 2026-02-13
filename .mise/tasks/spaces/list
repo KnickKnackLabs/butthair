@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+#MISE description="List all spaces with IDs and types"
+#USAGE flag "-j --json" help="Output as JSON"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+if [ "${usage_json:-false}" = "true" ]; then
+    hs_run '
+local screen = hs.screen.mainScreen()
+local spaces = hs.spaces.spacesForScreen(screen)
+local focused = hs.spaces.focusedSpace()
+local result = {}
+for i, sid in ipairs(spaces) do
+    result[#result+1] = {
+        index = i,
+        id = sid,
+        type = hs.spaces.spaceType(sid),
+        active = (sid == focused)
+    }
+end
+return hs.json.encode(result)
+'
+else
+    hs_run '
+local screen = hs.screen.mainScreen()
+local spaces = hs.spaces.spacesForScreen(screen)
+local focused = hs.spaces.focusedSpace()
+local lines = {}
+for i, sid in ipairs(spaces) do
+    local marker = (sid == focused) and " *" or ""
+    lines[#lines+1] = string.format("#%-2d  id=%-4d  %s%s", i, sid, hs.spaces.spaceType(sid), marker)
+end
+return table.concat(lines, "\n")
+'
+fi

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#MISE description="Remove a space by index number"
+#USAGE arg "index" help="Space index to remove (1-based)"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+INDEX="${usage_index:?space index required}"
+hs_validate_num "$INDEX"
+
+hs_run "
+local screen = hs.screen.mainScreen()
+local spaces = hs.spaces.spacesForScreen(screen)
+local idx = $INDEX
+if idx < 1 or idx > #spaces then
+    return 'error: index out of range (1-' .. #spaces .. ')'
+end
+local spaceID = spaces[idx]
+if spaceID == hs.spaces.focusedSpace() then
+    return 'error: cannot remove active space (switch away first)'
+end
+if #spaces <= 1 then
+    return 'error: cannot remove the only space'
+end
+local result, err = hs.spaces.removeSpace(spaceID, true)
+if not result then
+    return 'error: ' .. tostring(err)
+end
+hs.timer.usleep(1000000)
+local after = hs.spaces.spacesForScreen(screen)
+return string.format('removed space #%d (id=%d), %d spaces remain', idx, spaceID, #after)
+"
