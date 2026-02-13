@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+#MISE description="Launch an app and optionally position its window"
+#USAGE arg "app" help="Application name (e.g. Safari, TextEdit)"
+#USAGE flag "--x <x>" help="X position"
+#USAGE flag "--y <y>" help="Y position"
+#USAGE flag "--width <w>" help="Width"
+#USAGE flag "--height <h>" help="Height"
+#USAGE flag "--url <url>" help="URL to open (browser apps)"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+APP="${usage_app:?app name required}"
+X="${usage_x:-}"
+Y="${usage_y:-}"
+W="${usage_width:-}"
+H="${usage_height:-}"
+URL="${usage_url:-}"
+
+# Launch the app
+if [ -n "$URL" ]; then
+    open -a "$APP" "$URL"
+else
+    hs_run "hs.application.open('$APP')"
+fi
+
+# Wait for window to appear (poll from bash to avoid hs CLI timeout)
+for i in $(seq 1 30); do
+    RESULT=$(hs_run "
+local app = hs.application.get('$APP')
+if app and app:mainWindow() then return 'ready' end
+return 'waiting'
+")
+    if [ "$RESULT" = "ready" ]; then break; fi
+    sleep 0.2
+done
+
+if [ "$RESULT" != "ready" ]; then
+    echo "error: $APP window not ready after 6s" >&2
+    exit 1
+fi
+
+# Position if any coordinates given
+if [ -n "$X" ] || [ -n "$Y" ] || [ -n "$W" ] || [ -n "$H" ]; then
+    for i in $(seq 1 20); do
+        hs_run "
+local app = hs.application.get('$APP')
+local win = app:mainWindow()
+local f = win:frame()
+local target = hs.geometry.rect(${X:-f.x}, ${Y:-f.y}, ${W:-f.w}, ${H:-f.h})
+win:setFrame(target)
+"
+        sleep 0.1
+        MATCH=$(hs_run "
+local app = hs.application.get('$APP')
+local win = app:mainWindow()
+local f = win:frame()
+if f.x == ${X:-f.x} and f.y == ${Y:-f.y} and f.w == ${W:-f.w} and f.h == ${H:-f.h} then return 'yes' end
+return 'no'
+")
+        if [ "$MATCH" = "yes" ]; then break; fi
+    done
+fi
+
+# Report final position
+hs_run "
+local app = hs.application.get('$APP')
+local win = app:mainWindow()
+local f = win:frame()
+print(string.format('%s: x=%d y=%d w=%d h=%d', '$APP', f.x, f.y, f.w, f.h))
+"

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#MISE description="Add a new space"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+hs_run '
+local screen = hs.screen.mainScreen()
+local before = #hs.spaces.spacesForScreen(screen)
+local result, err = hs.spaces.addSpaceToScreen(screen, true)
+if not result then
+    return "error: " .. tostring(err)
+end
+hs.timer.usleep(1000000)
+local after = hs.spaces.spacesForScreen(screen)
+local newSpace = after[#after]
+return string.format("added space #%d (id=%d)", #after, newSpace)
+'

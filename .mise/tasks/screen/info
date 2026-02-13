@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+#MISE description="Show screen dimensions and info"
+#USAGE flag "-j --json" help="Output as JSON"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+if [ "${usage_json:-false}" = "true" ]; then
+    hs_run '
+local screen = hs.screen.mainScreen()
+local f = screen:frame()
+local ff = screen:fullFrame()
+return hs.json.encode({
+    name = screen:name(),
+    usable = { x = f.x, y = f.y, w = f.w, h = f.h },
+    full = { x = ff.x, y = ff.y, w = ff.w, h = ff.h }
+})
+'
+else
+    hs_run '
+local screen = hs.screen.mainScreen()
+local f = screen:frame()
+local ff = screen:fullFrame()
+return string.format("%s\n  usable: %dx%d (x=%d y=%d)\n  full:   %dx%d (x=%d y=%d)",
+    screen:name(), f.w, f.h, f.x, f.y, ff.w, ff.h, ff.x, ff.y)
+'
+fi

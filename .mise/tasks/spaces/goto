@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#MISE description="Switch to a space by index number"
+#USAGE arg "index" help="Space index (1-based)"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+INDEX="${usage_index:?space index required}"
+
+hs_run "
+local screen = hs.screen.mainScreen()
+local spaces = hs.spaces.spacesForScreen(screen)
+local idx = $INDEX
+if idx < 1 or idx > #spaces then
+    return 'error: index out of range (1-' .. #spaces .. ')'
+end
+hs.spaces.gotoSpace(spaces[idx])
+return 'switched to space #' .. idx
+"
