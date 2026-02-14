@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Press a key combination"
 #USAGE arg "<key>" help="Key name (e.g. v, return, escape, tab, space, f1)"
-#USAGE flag "--mod <mod>" help="Modifier: cmd, ctrl, alt, shift (repeatable)" {multiple}
+#USAGE flag "--mod... <mod>" help="Modifier: cmd, ctrl, alt, shift (repeatable)"
 
 set -e
 
@@ -36,4 +36,10 @@ if [ -n "${usage_mod+x}" ]; then
 fi
 MODS+="}"
 
-hs_run "hs.eventtap.keyStroke(${MODS}, '${KEY}'); return [[ok]]" > /dev/null
+# Use newKeyEventSequence + post instead of keyStroke to avoid its
+# internal timer delay which hangs the hs CLI.
+hs_run "
+local events = hs.eventtap.event.newKeyEventSequence(${MODS}, '${KEY}')
+for _, e in ipairs(events) do e:post() end
+return [[ok]]
+" > /dev/null
