@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+#MISE description="Uninstall Hammerspoon and remove config"
+
+set -e
+
+APP_PATH="/Applications/Hammerspoon.app"
+CONFIG_DIR="$HOME/.hammerspoon"
+
+# Stop if running
+if pgrep -x "Hammerspoon" > /dev/null; then
+    echo "Stopping Hammerspoon..."
+    pkill -x Hammerspoon || true
+    sleep 1
+fi
+
+# Remove app
+if [ -d "$APP_PATH" ]; then
+    echo "Removing $APP_PATH"
+    rm -rf "$APP_PATH"
+else
+    echo "App not installed"
+fi
+
+# Remove config
+if [ -d "$CONFIG_DIR" ]; then
+    echo "Removing $CONFIG_DIR"
+    rm -rf "$CONFIG_DIR"
+else
+    echo "Config not found"
+fi
+
+echo "Hammerspoon uninstalled"
+echo "Note: you may need to manually remove Hammerspoon from Privacy & Security > Accessibility"

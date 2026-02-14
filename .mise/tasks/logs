@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#MISE description="Show Hammerspoon console logs"
+#USAGE flag "-n --lines <count>" help="Number of lines to show" default="50"
+#USAGE flag "-e --errors" help="Show only errors"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$TASKS_DIR/_hs"
+
+LINES="${usage_lines}"
+ERRORS="${usage_errors:-false}"
+
+# Try IPC first, fall back to macOS unified log
+OUTPUT=""
+if timeout 3 "$HS_CLI" -c "return [[ok]]" >/dev/null 2>&1; then
+    OUTPUT=$(hs_run "return hs.console.getConsole()" 2>/dev/null || echo "")
+fi
+
+if [ -n "$OUTPUT" ]; then
+    if [ "$ERRORS" = "true" ]; then
+        echo "$OUTPUT" | tail -n "$LINES" | grep -i "error" || echo "(no errors in last $LINES lines)"
+    else
+        echo "$OUTPUT" | tail -n "$LINES"
+    fi
+else
+    echo "(IPC unavailable — falling back to macOS unified log)" >&2
+    LOG_CMD="log show --process Hammerspoon --last 5m --style compact"
+    if [ "$ERRORS" = "true" ]; then
+        $LOG_CMD 2>/dev/null | grep -i "error" | tail -n "$LINES" || echo "(no errors found)"
+    else
+        $LOG_CMD 2>/dev/null | tail -n "$LINES"
+    fi
+fi

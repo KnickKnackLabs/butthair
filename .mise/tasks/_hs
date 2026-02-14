@@ -40,12 +40,14 @@ hs_validate_num() {
 }
 
 hs_run() {
-    local _hs_err
+    local _hs_out _hs_err
+    _hs_out=$(mktemp)
     _hs_err=$(mktemp)
-    "$HS_CLI" -c "$1" 2>"$_hs_err"
+    "$HS_CLI" -c "$1" >"$_hs_out" 2>"$_hs_err"
     local _hs_rc=$?
-    # Filter out noisy extension loading lines, surface real errors
+    # Filter out noisy extension loading lines from both streams
+    sed '/^-- Loading extension: /d; /^-- Loading ~/d' "$_hs_out"
     sed '/^-- Loading extension: /d; /^-- Loading ~/d' "$_hs_err" >&2
-    rm -f "$_hs_err"
+    rm -f "$_hs_out" "$_hs_err"
     return $_hs_rc
 }

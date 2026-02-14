@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+#MISE description="Initial Hammerspoon setup for butthair"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+APP_PATH="/Applications/Hammerspoon.app"
+CONFIG_DIR="$HOME/.hammerspoon"
+CONFIG_FILE="$CONFIG_DIR/init.lua"
+HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
+
+echo "butthair setup"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+# Step 1: Install
+echo "1. Installation"
+"$TASKS_DIR/install"
+echo ""
+
+# Step 2: Base config (only if no config exists)
+echo "2. Configuration"
+mkdir -p "$CONFIG_DIR"
+
+if [ -f "$CONFIG_FILE" ]; then
+    if grep -q "require.*hs.ipc" "$CONFIG_FILE" 2>/dev/null; then
+        echo "Config exists with IPC enabled"
+    else
+        echo "warning: config exists but IPC not found — hs CLI may not work" >&2
+        echo "Ensure your init.lua contains: require(\"hs.ipc\")"
+    fi
+else
+    cat > "$CONFIG_FILE" << 'INITLUA'
+-- Hammerspoon configuration
+-- Managed by butthair
+
+-- Enable CLI (hs command) — required for butthair
+require("hs.ipc")
+
+-- Reload config with Cmd+Ctrl+R
+hs.hotkey.bind({"cmd", "ctrl"}, "R", function()
+    hs.reload()
+end)
+
+hs.notify.new({title="Hammerspoon", informativeText="Config loaded"}):send()
+INITLUA
+    echo "Config written to $CONFIG_FILE"
+fi
+echo ""
+
+# Step 3: Launch
+echo "3. Launch"
+if pgrep -x "Hammerspoon" > /dev/null; then
+    echo "Already running"
+else
+    echo "Starting Hammerspoon..."
+    open "$APP_PATH"
+    for i in $(seq 1 10); do
+        if pgrep -x "Hammerspoon" > /dev/null; then
+            break
+        fi
+        sleep 1
+    done
+
+    if pgrep -x "Hammerspoon" > /dev/null; then
+        echo "Started"
+    else
+        echo "error: failed to start — try launching manually" >&2
+        exit 1
+    fi
+fi
+echo ""
+
+# Step 4: Verify IPC
+echo "4. Verify IPC"
+sleep 2
+RESULT=$(timeout 5 "$HS_CLI" -c "return [[ok]]" 2>/dev/null || echo "")
+if [ "$RESULT" = "ok" ]; then
+    echo "IPC working"
+else
+    echo "warning: IPC not responding yet — you may need to grant accessibility permissions" >&2
+    echo "Enable in: System Settings → Privacy & Security → Accessibility"
+fi
+echo ""
+
+# Step 5: Accessibility
+echo "5. Accessibility"
+if [ "$RESULT" = "ok" ]; then
+    ACCESS=$("$HS_CLI" -c "return hs.accessibilityState()" 2>/dev/null || echo "false")
+    if [ "$ACCESS" = "true" ]; then
+        echo "Accessibility enabled"
+    else
+        echo "Accessibility not enabled"
+        echo "Enable in: System Settings → Privacy & Security → Accessibility"
+    fi
+else
+    echo "Skipped (IPC not available)"
+fi
+
+echo ""
+echo "Setup complete. Run 'butthair status' to verify."
