@@ -12,13 +12,18 @@ LINES="${usage_lines}"
 ERRORS="${usage_errors:-false}"
 
 # Try IPC first, fall back to macOS unified log
-OUTPUT=""
+# Note: hs.console.getConsole() returns console window contents, which
+# may be empty if the console was never opened in this session.
+IPC_OK=false
 if timeout 3 "$HS_CLI" -c "return [[ok]]" >/dev/null 2>&1; then
+    IPC_OK=true
     OUTPUT=$(hs_run "return hs.console.getConsole()" 2>/dev/null || echo "")
 fi
 
-if [ -n "$OUTPUT" ]; then
-    if [ "$ERRORS" = "true" ]; then
+if [ "$IPC_OK" = "true" ]; then
+    if [ -z "$OUTPUT" ]; then
+        echo "(console output is empty)"
+    elif [ "$ERRORS" = "true" ]; then
         echo "$OUTPUT" | tail -n "$LINES" | grep -i "error" || echo "(no errors in last $LINES lines)"
     else
         echo "$OUTPUT" | tail -n "$LINES"

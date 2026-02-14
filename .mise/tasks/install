@@ -4,6 +4,7 @@
 
 set -e
 
+# Releases: https://github.com/Hammerspoon/hammerspoon/releases
 HAMMERSPOON_VERSION="1.1.0"
 HAMMERSPOON_URL="https://github.com/Hammerspoon/hammerspoon/releases/download/${HAMMERSPOON_VERSION}/Hammerspoon-${HAMMERSPOON_VERSION}.zip"
 APP_PATH="/Applications/Hammerspoon.app"
@@ -35,7 +36,7 @@ fi
 echo "Installing Hammerspoon $HAMMERSPOON_VERSION..."
 
 TEMP_DIR=$(mktemp -d)
-trap "rm -rf $TEMP_DIR" EXIT
+trap "rm -rf \"$TEMP_DIR\"" EXIT
 
 curl -L -s -o "$TEMP_DIR/Hammerspoon.zip" "$HAMMERSPOON_URL"
 unzip -q -o "$TEMP_DIR/Hammerspoon.zip" -d "$TEMP_DIR"
