@@ -10,9 +10,6 @@ hs_check
 
 TEXT="${usage_text:?text required}"
 
-if echo "$TEXT" | grep -qF ']]'; then
-    echo "error: text must not contain ']]'" >&2
-    exit 1
-fi
+hs_validate_lua_str "$TEXT"
 
 hs_run "hs.eventtap.keyStrokes([[${TEXT}]]); return [[ok]]" > /dev/null

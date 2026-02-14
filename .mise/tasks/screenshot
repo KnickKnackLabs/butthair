@@ -23,6 +23,8 @@ case "$EXT" in
     *)        METHOD="shotAsPNG" ;;
 esac
 
+hs_validate_lua_str "$OUTPUT"
+
 RESULT=$(hs_run "hs.screen.mainScreen():${METHOD}([[${OUTPUT}]]); return [[ok]]")
 if [ "$RESULT" = "ok" ]; then
     echo "$OUTPUT"
