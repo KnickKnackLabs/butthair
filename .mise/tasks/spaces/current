@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Show the current space index and ID"
+#USAGE flag "-i --index" help="Output just the index number"
 
 set -e
 
@@ -7,7 +8,18 @@ TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$TASKS_DIR/_hs"
 hs_check
 
-hs_run '
+if [ "${usage_index:-false}" = "true" ]; then
+    hs_run '
+local screen = hs.screen.mainScreen()
+local spaces = hs.spaces.spacesForScreen(screen)
+local focused = hs.spaces.focusedSpace()
+for i, sid in ipairs(spaces) do
+    if sid == focused then return tostring(i) end
+end
+return "0"
+'
+else
+    hs_run '
 local screen = hs.screen.mainScreen()
 local spaces = hs.spaces.spacesForScreen(screen)
 local focused = hs.spaces.focusedSpace()
@@ -18,3 +30,4 @@ for i, sid in ipairs(spaces) do
 end
 return "unknown"
 '
+fi

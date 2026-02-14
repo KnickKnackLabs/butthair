@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#MISE description="Close a window by ID"
+#USAGE arg "id" help="Window ID (from windows:list)"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+WIN_ID="${usage_id:?window id required}"
+hs_validate_num "$WIN_ID"
+
+hs_run "
+local win = hs.window.get($WIN_ID)
+if not win then return 'error: window not found: $WIN_ID' end
+local title = win:title() or ''
+local app = win:application():name() or '?'
+win:close()
+return string.format('closed: %s (%s)', app, title)
+"
