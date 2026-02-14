@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Press a key combination"
 #USAGE arg "<key>" help="Key name (e.g. v, return, escape, tab, space, f1)"
-#USAGE flag "--mod <mod>" help="Modifier: cmd, ctrl, alt, shift (repeatable)" {multiple}
+#USAGE flag "--mod... <mod>" help="Modifier: cmd, ctrl, alt, shift (repeatable)"
 
 set -e
 

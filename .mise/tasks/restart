@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#MISE description="Restart Hammerspoon and wait for IPC"
+#USAGE flag "-t --timeout <seconds>" help="Max seconds to wait for IPC" default="15"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$TASKS_DIR/_hs"
+
+APP_PATH="/Applications/Hammerspoon.app"
+TIMEOUT="${usage_timeout}"
+
+if [ ! -d "$APP_PATH" ]; then
+    echo "error: Hammerspoon not installed" >&2
+    exit 1
+fi
+
+# Kill if running
+if pgrep -x "Hammerspoon" > /dev/null; then
+    pkill -x Hammerspoon
+    # Wait for process to exit
+    for i in $(seq 1 5); do
+        pgrep -x "Hammerspoon" > /dev/null || break
+        sleep 1
+    done
+fi
+
+# Launch
+open "$APP_PATH"
+
+# Wait for IPC to be responsive
+for i in $(seq 1 "$TIMEOUT"); do
+    if timeout 3 "$HS_CLI" -c "return [[ok]]" 2>/dev/null | grep -q "ok"; then
+        echo "ok"
+        exit 0
+    fi
+    sleep 1
+done
+
+echo "error: Hammerspoon started but IPC not responding after ${TIMEOUT}s" >&2
+exit 1

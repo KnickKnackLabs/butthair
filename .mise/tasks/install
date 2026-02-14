@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+#MISE description="Install or upgrade Hammerspoon"
+#USAGE flag "--upgrade" help="Upgrade even if already installed"
+
+set -e
+
+# Releases: https://github.com/Hammerspoon/hammerspoon/releases
+HAMMERSPOON_VERSION="1.1.0"
+HAMMERSPOON_URL="https://github.com/Hammerspoon/hammerspoon/releases/download/${HAMMERSPOON_VERSION}/Hammerspoon-${HAMMERSPOON_VERSION}.zip"
+APP_PATH="/Applications/Hammerspoon.app"
+UPGRADE="${usage_upgrade:-false}"
+
+# Check current state
+if [ -d "$APP_PATH" ]; then
+    INSTALLED_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
+
+    if [ "$INSTALLED_VERSION" = "$HAMMERSPOON_VERSION" ] && [ "$UPGRADE" != "true" ]; then
+        echo "Hammerspoon $INSTALLED_VERSION already installed"
+        exit 0
+    fi
+
+    if [ "$INSTALLED_VERSION" != "$HAMMERSPOON_VERSION" ] && [ "$UPGRADE" != "true" ]; then
+        echo "Hammerspoon $INSTALLED_VERSION installed (expected $HAMMERSPOON_VERSION)"
+        echo "Run with --upgrade to replace"
+        exit 0
+    fi
+
+    # Stop before replacing
+    if pgrep -x "Hammerspoon" > /dev/null; then
+        pkill -x Hammerspoon
+        sleep 1
+    fi
+    rm -rf "$APP_PATH"
+fi
+
+echo "Installing Hammerspoon $HAMMERSPOON_VERSION..."
+
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf \"$TEMP_DIR\"" EXIT
+
+curl -L -s -o "$TEMP_DIR/Hammerspoon.zip" "$HAMMERSPOON_URL"
+unzip -q -o "$TEMP_DIR/Hammerspoon.zip" -d "$TEMP_DIR"
+mv "$TEMP_DIR/Hammerspoon.app" "$APP_PATH"
+
+echo "Hammerspoon $HAMMERSPOON_VERSION installed"

@@ -4,16 +4,18 @@
 TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$TASKS_DIR/_hs"
 
+APP_PATH="/Applications/Hammerspoon.app"
+
 echo "butthair status"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Installation
-if [ -x "$HS_CLI" ]; then
-    VERSION=$(hs_run "return hs.processInfo.version" || echo "unknown")
+if [ -d "$APP_PATH" ]; then
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
     echo "  Installed:     ✓ ($VERSION)"
 else
     echo "  Installed:     ✗"
-    echo "  Install from https://www.hammerspoon.org/"
+    echo "  Install with: butthair install"
     exit 0
 fi
 
@@ -22,11 +24,29 @@ if pgrep -x "Hammerspoon" > /dev/null; then
     echo "  Running:       ✓"
 else
     echo "  Running:       ✗"
+    echo "  Start with: open /Applications/Hammerspoon.app"
+    exit 0
+fi
+
+# IPC health — this is what catches stale ports
+IPC_OK=false
+if [ -x "$HS_CLI" ]; then
+    RESULT=$(timeout 3 "$HS_CLI" -c "return [[ok]]" 2>/dev/null || echo "")
+    if [ "$RESULT" = "ok" ]; then
+        IPC_OK=true
+        echo "  IPC:           ✓"
+    else
+        echo "  IPC:           ✗ (not responding — try: butthair restart)"
+    fi
+fi
+
+# Everything below requires working IPC
+if [ "$IPC_OK" = "false" ]; then
     exit 0
 fi
 
 # Accessibility
-ACCESS=$(hs_run "return hs.accessibilityState()")
+ACCESS=$(hs_run "return hs.accessibilityState()" || echo "false")
 if [ "$ACCESS" = "true" ]; then
     echo "  Accessibility: ✓"
 else
@@ -34,10 +54,10 @@ else
 fi
 
 # Screens
-SCREEN_COUNT=$(hs_run "return #hs.screen.allScreens()")
-MAIN_SCREEN=$(hs_run "return hs.screen.mainScreen():name()")
+SCREEN_COUNT=$(hs_run "return #hs.screen.allScreens()" || echo "?")
+MAIN_SCREEN=$(hs_run "return hs.screen.mainScreen():name()" || echo "unknown")
 echo "  Screens:       $SCREEN_COUNT ($MAIN_SCREEN)"
 
 # Windows
-WIN_COUNT=$(hs_run "return #hs.window.allWindows()")
+WIN_COUNT=$(hs_run "return #hs.window.allWindows()" || echo "?")
 echo "  Windows:       $WIN_COUNT"
