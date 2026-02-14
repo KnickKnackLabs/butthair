@@ -23,6 +23,14 @@ hs_validate_app() {
     fi
 }
 
+# Validate a string is safe for Lua long bracket interpolation ([[...]])
+hs_validate_lua_str() {
+    if echo "$1" | grep -qF ']]'; then
+        echo "error: value must not contain ']]'" >&2
+        exit 1
+    fi
+}
+
 # Validate a value is a number (integer)
 hs_validate_num() {
     if ! echo "$1" | grep -qE '^-?[0-9]+$'; then

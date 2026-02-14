@@ -11,5 +11,7 @@ hs_check
 
 TITLE="${usage_title}"
 MESSAGE="${usage_message:-}"
+hs_validate_lua_str "$TITLE"
+hs_validate_lua_str "$MESSAGE"
 
 hs_run "hs.notify.show([[${TITLE}]], [[]], [[${MESSAGE}]]); return [[ok]]" > /dev/null

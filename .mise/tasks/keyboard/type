@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+#MISE description="Type a string of text"
+#USAGE arg "<text>" help="Text to type"
+
+set -e
+
+TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$TASKS_DIR/_hs"
+hs_check
+
+TEXT="${usage_text:?text required}"
+
+hs_validate_lua_str "$TEXT"
+
+hs_run "hs.eventtap.keyStrokes([[${TEXT}]]); return [[ok]]" > /dev/null
