@@ -36,7 +36,7 @@ hs_run "return hs.screen.mainScreen():name()"
 
 ## Shimmer
 
-This project uses [shimmer](https://github.com/ricon-family/shimmer) for agent workflows.
+This project uses [shimmer](https://github.com/KnickKnackLabs/shimmer) for agent workflows.
 
 Key commands:
 - `shimmer welcome` - Check your identity and system health
