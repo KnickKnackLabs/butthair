@@ -45,13 +45,37 @@ if [ "$IPC_OK" = "false" ]; then
     exit 0
 fi
 
-# Accessibility
+# Permissions
+echo ""
+echo "  Permissions"
+
 ACCESS=$(hs_run "return hs.accessibilityState()" || echo "false")
 if [ "$ACCESS" = "true" ]; then
-    echo "  Accessibility: ✓"
+    echo "    Accessibility: ✓"
 else
-    echo "  Accessibility: ✗ (enable in System Settings → Privacy & Security → Accessibility)"
+    echo "    Accessibility: ✗ (System Settings → Privacy & Security → Accessibility)"
 fi
+
+NOTIF_STATUS=$(hs_run '
+local n = hs.notify.new({title="__butthair_status_check"}):send()
+hs.timer.usleep(500000)
+local found = false
+for _, d in ipairs(hs.notify.deliveredNotifications()) do
+    if d:title() == "__butthair_status_check" then
+        found = true
+        d:withdraw()
+        break
+    end
+end
+return tostring(found)
+' || echo "false")
+if [ "$NOTIF_STATUS" = "true" ]; then
+    echo "    Notifications: ✓"
+else
+    echo "    Notifications: ✗ (System Settings → Notifications → Hammerspoon)"
+fi
+
+echo ""
 
 # Screens
 SCREEN_COUNT=$(hs_run "return #hs.screen.allScreens()" || echo "?")
