@@ -56,24 +56,10 @@ else
     echo "    Accessibility: ✗ (System Settings → Privacy & Security → Accessibility)"
 fi
 
-NOTIF_STATUS=$(hs_run '
-local n = hs.notify.new({title="__butthair_status_check"}):send()
-hs.timer.usleep(500000)
-local found = false
-for _, d in ipairs(hs.notify.deliveredNotifications()) do
-    if d:title() == "__butthair_status_check" then
-        found = true
-        d:withdraw()
-        break
-    end
-end
-return tostring(found)
-' || echo "false")
-if [ "$NOTIF_STATUS" = "true" ]; then
-    echo "    Notifications: ✓"
-else
-    echo "    Notifications: ✗ (System Settings → Notifications → Hammerspoon)"
-fi
+# Notification permissions can't be detected programmatically — send a visible check
+hs_run 'hs.notify.new({title="butthair", informativeText="Notification check — you should see this"}):send()' &>/dev/null || true
+echo "    Notifications: ? (a notification was just sent — did you see it?)"
+echo "                      If not → System Settings → Notifications → Hammerspoon"
 
 echo ""
 
