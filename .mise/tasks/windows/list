@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 #MISE description="List all windows"
 #USAGE flag "-j --json" help="Output as JSON"
+#USAGE flag "-a --app <app>" help="Filter by app name (case-insensitive substring)"
+#USAGE flag "-s --space <space>" help="Filter by space index"
 
 set -e
 
@@ -8,33 +10,96 @@ TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$TASKS_DIR/_hs"
 hs_check
 
+FILTER_APP="${usage_app:-}"
+FILTER_SPACE="${usage_space:-}"
+
+if [ -n "$FILTER_SPACE" ]; then
+    hs_validate_num "$FILTER_SPACE"
+fi
+if [ -n "$FILTER_APP" ]; then
+    hs_validate_lua_str "$FILTER_APP"
+fi
+
+# Shared Lua preamble: build space-index lookup, get all windows cross-space
+read -r -d '' LUA_PREAMBLE << 'LUAEOF' || true
+local screen = hs.screen.mainScreen()
+local allSpaces = hs.spaces.spacesForScreen(screen)
+local spaceIndex = {}
+for i, sid in ipairs(allSpaces) do spaceIndex[sid] = i end
+
+-- hs.window.filter.default sees windows across all spaces
+local wins = hs.window.filter.default:getWindows()
+LUAEOF
+
 if [ "${usage_json:-false}" = "true" ]; then
-    hs_run '
+    hs_run "
+${LUA_PREAMBLE}
+local filterApp = ([[${FILTER_APP}]]):lower()
+local filterSpace = tonumber([[${FILTER_SPACE}]]) or 0
 local result = {}
-for _, win in ipairs(hs.window.allWindows()) do
+for _, win in ipairs(wins) do
     local app = win:application()
-    local f = win:frame()
-    result[#result+1] = {
-        id = win:id(),
-        app = app and app:title() or "",
-        title = win:title() or "",
-        x = f.x, y = f.y, w = f.w, h = f.h,
-        visible = win:isVisible()
-    }
+    local appName = app and app:title() or ''
+    local wSpaces = hs.spaces.windowSpaces(win)
+    local indices = {}
+    for _, sid in ipairs(wSpaces) do
+        if spaceIndex[sid] then indices[#indices+1] = spaceIndex[sid] end
+    end
+    local show = true
+    if filterApp ~= '' and not appName:lower():find(filterApp, 1, true) then show = false end
+    if filterSpace > 0 then
+        local found = false
+        for _, idx in ipairs(indices) do if idx == filterSpace then found = true end end
+        if not found then show = false end
+    end
+    if show then
+        local f = win:frame()
+        result[#result+1] = {
+            id = win:id(),
+            app = appName,
+            title = win:title() or '',
+            x = f.x, y = f.y, w = f.w, h = f.h,
+            spaces = indices,
+            visible = win:isVisible()
+        }
+    end
 end
 return hs.json.encode(result)
-'
+"
 else
-    hs_run '
+    hs_run "
+${LUA_PREAMBLE}
+local filterApp = ([[${FILTER_APP}]]):lower()
+local filterSpace = tonumber([[${FILTER_SPACE}]]) or 0
 local lines = {}
-for _, win in ipairs(hs.window.allWindows()) do
+lines[#lines+1] = 'ID|APP|TITLE|SPACE|POS|SIZE'
+for _, win in ipairs(wins) do
     local app = win:application()
-    local f = win:frame()
-    lines[#lines+1] = string.format("%-25s %-45s %d,%d %dx%d",
-        app and app:title() or "",
-        win:title() or "",
-        f.x, f.y, f.w, f.h)
+    local appName = app and app:title() or ''
+    local wSpaces = hs.spaces.windowSpaces(win)
+    local indices = {}
+    for _, sid in ipairs(wSpaces) do
+        if spaceIndex[sid] then indices[#indices+1] = spaceIndex[sid] end
+    end
+    local show = true
+    if filterApp ~= '' and not appName:lower():find(filterApp, 1, true) then show = false end
+    if filterSpace > 0 then
+        local found = false
+        for _, idx in ipairs(indices) do if idx == filterSpace then found = true end end
+        if not found then show = false end
+    end
+    if show then
+        local f = win:frame()
+        local title = (win:title() or ''):gsub('|', '/')
+        if #title > 40 then title = title:sub(1, 39) .. '…' end
+        local strIndices = {}
+        for _, idx in ipairs(indices) do strIndices[#strIndices+1] = tostring(idx) end
+        lines[#lines+1] = string.format('%d|%s|%s|%s|%d,%d|%dx%d',
+            win:id(), appName, title,
+            table.concat(strIndices, ','),
+            f.x, f.y, f.w, f.h)
+    end
 end
-return table.concat(lines, "\n")
-'
+return table.concat(lines, '\n')
+" | gum table -s '|' -p --border.foreground="240"
 fi

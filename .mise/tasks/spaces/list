@@ -30,10 +30,11 @@ local screen = hs.screen.mainScreen()
 local spaces = hs.spaces.spacesForScreen(screen)
 local focused = hs.spaces.focusedSpace()
 local lines = {}
+lines[#lines+1] = "#|ID|TYPE|ACTIVE"
 for i, sid in ipairs(spaces) do
-    local marker = (sid == focused) and " *" or ""
-    lines[#lines+1] = string.format("#%-2d  id=%-4d  %s%s", i, sid, hs.spaces.spaceType(sid), marker)
+    local marker = (sid == focused) and "*" or ""
+    lines[#lines+1] = string.format("%d|%d|%s|%s", i, sid, hs.spaces.spaceType(sid), marker)
 end
 return table.concat(lines, "\n")
-'
+' | gum table -s '|' -p --border.foreground="240"
 fi

@@ -39,6 +39,43 @@ hs_validate_num() {
     fi
 }
 
+# Check if Hammerspoon has notification permission.
+# Sends a hidden test notification, checks delivery, withdraws it.
+hs_check_notify() {
+    local result
+    result=$(hs_run '
+local n = hs.notify.new({title="__butthair_test__", informativeText="permission check"}):send()
+hs.timer.usleep(500000)
+local delivered = hs.notify.deliveredNotifications()
+for _, d in ipairs(delivered) do
+    if d:title() == "__butthair_test__" then
+        d:withdraw()
+        return "ok"
+    end
+end
+return "blocked"
+')
+    if [ "$result" = "blocked" ]; then
+        echo "error: Hammerspoon notifications are not allowed" >&2
+        echo "Enable in: System Settings → Notifications → Hammerspoon → Allow Notifications" >&2
+        exit 1
+    fi
+}
+
+# Check if Hammerspoon has screen recording permission.
+hs_check_screen_recording() {
+    local result
+    result=$(hs_run '
+local img = hs.screen.mainScreen():snapshot()
+if img then return "ok" else return "blocked" end
+')
+    if [ "$result" = "blocked" ]; then
+        echo "error: Hammerspoon does not have screen recording permission" >&2
+        echo "Enable in: System Settings → Privacy & Security → Screen Recording → Hammerspoon" >&2
+        exit 1
+    fi
+}
+
 hs_run() {
     local _hs_out _hs_err
     _hs_out=$(mktemp)
