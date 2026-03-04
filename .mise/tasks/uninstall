@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#MISE description="Uninstall Hammerspoon"
+#USAGE flag "--force" help="Skip confirmation prompt"
+#USAGE flag "--keep-config" help="Keep ~/.hammerspoon config directory"
+
+set -e
+
+APP_PATH="/Applications/Hammerspoon.app"
+CONFIG_DIR="$HOME/.hammerspoon"
+FORCE="${usage_force:-false}"
+KEEP_CONFIG="${usage_keep_config:-false}"
+
+if [ ! -d "$APP_PATH" ] && [ ! -d "$CONFIG_DIR" ]; then
+    echo "Hammerspoon is not installed"
+    exit 0
+fi
+
+# Safety check — summarize what will be removed
+echo "butthair uninstall"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+if [ -d "$APP_PATH" ]; then
+    VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "unknown")
+    echo "  App:    $APP_PATH ($VERSION)"
+fi
+
+if [ -d "$CONFIG_DIR" ] && [ "$KEEP_CONFIG" != "true" ]; then
+    CONFIG_FILES=$(find "$CONFIG_DIR" -type f 2>/dev/null | wc -l | tr -d ' ')
+    # Check for non-butthair content (user's own config)
+    HAS_CUSTOM=false
+    if [ -f "$CONFIG_DIR/init.lua" ]; then
+        if ! grep -q "Managed by butthair" "$CONFIG_DIR/init.lua" 2>/dev/null; then
+            HAS_CUSTOM=true
+        fi
+    fi
+    # Check for Spoons or other user additions
+    if [ -d "$CONFIG_DIR/Spoons" ] && [ "$(ls -A "$CONFIG_DIR/Spoons" 2>/dev/null)" ]; then
+        HAS_CUSTOM=true
+    fi
+
+    echo "  Config: $CONFIG_DIR ($CONFIG_FILES files)"
+    if [ "$HAS_CUSTOM" = "true" ]; then
+        echo ""
+        echo "  ⚠️  Config appears to contain non-butthair content!"
+        echo "  Use --keep-config to preserve it, or back it up first."
+    fi
+elif [ "$KEEP_CONFIG" = "true" ]; then
+    echo "  Config: keeping $CONFIG_DIR (--keep-config)"
+fi
+
+echo ""
+
+# Confirmation
+if [ "$FORCE" != "true" ]; then
+    echo "This will remove Hammerspoon from your system."
+    echo "butthair and any tools that depend on it will stop working."
+    echo ""
+    read -p "Type 'uninstall' to confirm: " CONFIRM
+    if [ "$CONFIRM" != "uninstall" ]; then
+        echo "Cancelled"
+        exit 0
+    fi
+    echo ""
+fi
+
+# Stop Hammerspoon
+if pgrep -x "Hammerspoon" > /dev/null; then
+    echo "Stopping Hammerspoon..."
+    pkill -x Hammerspoon || true
+    sleep 1
+fi
+
+# Remove app
+if [ -d "$APP_PATH" ]; then
+    rm -rf "$APP_PATH"
+    echo "Removed $APP_PATH"
+fi
+
+# Remove config
+if [ -d "$CONFIG_DIR" ] && [ "$KEEP_CONFIG" != "true" ]; then
+    rm -rf "$CONFIG_DIR"
+    echo "Removed $CONFIG_DIR"
+fi
+
+echo ""
+echo "Hammerspoon uninstalled"
+echo ""
+echo "Note: Accessibility permissions may still show Hammerspoon in System Settings."
+echo "Remove manually from: Privacy & Security → Accessibility"

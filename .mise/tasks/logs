@@ -15,7 +15,7 @@ ERRORS="${usage_errors:-false}"
 # Note: hs.console.getConsole() returns console window contents, which
 # may be empty if the console was never opened in this session.
 IPC_OK=false
-if timeout 3 "$HS_CLI" -c "return [[ok]]" >/dev/null 2>&1; then
+if "$HS_CLI" -c "return [[ok]]" >/dev/null 2>&1; then
     IPC_OK=true
     OUTPUT=$(hs_run "return hs.console.getConsole()" 2>/dev/null || echo "")
 fi
