@@ -4,10 +4,11 @@
 set -e
 
 TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$TASKS_DIR/_hs"
+
 APP_PATH="/Applications/Hammerspoon.app"
 CONFIG_DIR="$HOME/.hammerspoon"
 CONFIG_FILE="$CONFIG_DIR/init.lua"
-HS_CLI="$APP_PATH/Contents/Frameworks/hs/hs"
 
 echo "butthair setup"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -26,8 +27,19 @@ if [ -f "$CONFIG_FILE" ]; then
     if grep -q "require.*hs.ipc" "$CONFIG_FILE" 2>/dev/null; then
         echo "Config exists with IPC enabled"
     else
-        echo "warning: config exists but IPC not found — hs CLI may not work" >&2
-        echo "Ensure your init.lua contains: require(\"hs.ipc\")"
+        # Inject IPC require at the top of existing config
+        # Use cat>target (not mv) to preserve original file permissions
+        TEMP=$(mktemp)
+        {
+            echo '-- Enable CLI (hs command) — required for butthair'
+            echo 'require("hs.ipc")'
+            echo ''
+            cat "$CONFIG_FILE"
+        } > "$TEMP"
+        cat "$TEMP" > "$CONFIG_FILE"
+        rm -f "$TEMP"
+        echo "Injected require(\"hs.ipc\") into existing config"
+        CONFIG_CHANGED=true
     fi
 else
     cat > "$CONFIG_FILE" << 'INITLUA'
@@ -45,13 +57,26 @@ end)
 hs.notify.new({title="Hammerspoon", informativeText="Config loaded"}):send()
 INITLUA
     echo "Config written to $CONFIG_FILE"
+    CONFIG_CHANGED=true
 fi
 echo ""
 
 # Step 3: Launch
 echo "3. Launch"
 if pgrep -x "Hammerspoon" > /dev/null; then
-    echo "Already running"
+    if [ "${CONFIG_CHANGED:-}" = "true" ]; then
+        echo "Restarting to load new config..."
+        pkill -x Hammerspoon
+        sleep 1
+        open "$APP_PATH"
+        for i in $(seq 1 10); do
+            pgrep -x "Hammerspoon" > /dev/null && break
+            sleep 1
+        done
+        echo "Restarted"
+    else
+        echo "Already running"
+    fi
 else
     echo "Starting Hammerspoon..."
     open "$APP_PATH"
@@ -74,7 +99,7 @@ echo ""
 # Step 4: Verify IPC
 echo "4. Verify IPC"
 sleep 2
-RESULT=$(timeout 5 "$HS_CLI" -c "return [[ok]]" 2>/dev/null || echo "")
+RESULT=$(hs_run 'return [[ok]]' 2>/dev/null || echo "")
 if [ "$RESULT" = "ok" ]; then
     echo "IPC working"
 else
@@ -86,12 +111,64 @@ echo ""
 # Step 5: Accessibility
 echo "5. Accessibility"
 if [ "$RESULT" = "ok" ]; then
-    ACCESS=$("$HS_CLI" -c "return hs.accessibilityState()" 2>/dev/null || echo "false")
+    ACCESS=$(hs_run 'return hs.accessibilityState()' 2>/dev/null || echo "false")
     if [ "$ACCESS" = "true" ]; then
         echo "Accessibility enabled"
     else
         echo "Accessibility not enabled"
-        echo "Enable in: System Settings → Privacy & Security → Accessibility"
+        echo ""
+        echo "To enable:"
+        echo "  1. Click the Hammerspoon menu bar icon"
+        echo "  2. Click 'Preferences...'"
+        echo "  3. Click 'Enable Accessibility'"
+        echo "  4. Toggle Hammerspoon ON in System Settings"
+        echo ""
+        echo "After enabling, restart Hammerspoon: butthair restart"
+    fi
+else
+    echo "Skipped (IPC not available)"
+fi
+echo ""
+
+# Step 6: Space-switching animation
+echo "6. Space-switching animation"
+ANIM_KEY="NSAutomaticWindowAnimationsEnabled"
+CURRENT_VAL=$(defaults read -g "$ANIM_KEY" 2>/dev/null || echo "missing")
+
+if [ "$CURRENT_VAL" = "0" ]; then
+    echo "Already disabled (instant space switching)"
+else
+    echo "macOS animates space transitions by default."
+    echo "Disabling makes switching feel instant."
+    echo ""
+    echo "To disable: defaults write -g $ANIM_KEY -bool false"
+    echo "To re-enable: defaults delete -g $ANIM_KEY"
+fi
+echo ""
+
+# Step 7: Verify
+echo "7. Verify"
+if [ "$RESULT" = "ok" ]; then
+    SPACE_COUNT=$(hs_run "$(cat <<'LUA'
+local screen = hs.screen.mainScreen()
+return #hs.spaces.spacesForScreen(screen)
+LUA
+    )" 2>/dev/null || echo "error")
+    CURRENT_SPACE=$(hs_run "$(cat <<'LUA'
+local screen = hs.screen.mainScreen()
+local spaces = hs.spaces.spacesForScreen(screen)
+local focused = hs.spaces.focusedSpace()
+for i, sid in ipairs(spaces) do
+    if sid == focused then return tostring(i) end
+end
+return '?'
+LUA
+    )" 2>/dev/null || echo "error")
+
+    if [ "$SPACE_COUNT" != "error" ] && [ "$CURRENT_SPACE" != "error" ]; then
+        echo "Hammerspoon working — space $CURRENT_SPACE of $SPACE_COUNT"
+    else
+        echo "warning: could not query spaces — try: butthair restart"
     fi
 else
     echo "Skipped (IPC not available)"

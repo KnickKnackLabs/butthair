@@ -30,7 +30,7 @@ open "$APP_PATH"
 
 # Wait for IPC to be responsive
 for i in $(seq 1 "$TIMEOUT"); do
-    if timeout 3 "$HS_CLI" -c "return [[ok]]" 2>/dev/null | grep -q "ok"; then
+    if "$HS_CLI" -c "return [[ok]]" 2>/dev/null | grep -q "ok"; then
         echo "ok"
         exit 0
     fi
