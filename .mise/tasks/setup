@@ -28,6 +28,7 @@ if [ -f "$CONFIG_FILE" ]; then
         echo "Config exists with IPC enabled"
     else
         # Inject IPC require at the top of existing config
+        # Use cat>target (not mv) to preserve original file permissions
         TEMP=$(mktemp)
         {
             echo '-- Enable CLI (hs command) — required for butthair'
@@ -35,7 +36,8 @@ if [ -f "$CONFIG_FILE" ]; then
             echo ''
             cat "$CONFIG_FILE"
         } > "$TEMP"
-        mv "$TEMP" "$CONFIG_FILE"
+        cat "$TEMP" > "$CONFIG_FILE"
+        rm -f "$TEMP"
         echo "Injected require(\"hs.ipc\") into existing config"
         CONFIG_CHANGED=true
     fi
@@ -97,7 +99,7 @@ echo ""
 # Step 4: Verify IPC
 echo "4. Verify IPC"
 sleep 2
-RESULT=$("$HS_CLI" -c "return [[ok]]" 2>/dev/null || echo "")
+RESULT=$(hs_run 'return [[ok]]' 2>/dev/null || echo "")
 if [ "$RESULT" = "ok" ]; then
     echo "IPC working"
 else
@@ -109,7 +111,7 @@ echo ""
 # Step 5: Accessibility
 echo "5. Accessibility"
 if [ "$RESULT" = "ok" ]; then
-    ACCESS=$("$HS_CLI" -c "return hs.accessibilityState()" 2>/dev/null || echo "false")
+    ACCESS=$(hs_run 'return hs.accessibilityState()' 2>/dev/null || echo "false")
     if [ "$ACCESS" = "true" ]; then
         echo "Accessibility enabled"
     else
@@ -147,11 +149,12 @@ echo ""
 # Step 7: Verify
 echo "7. Verify"
 if [ "$RESULT" = "ok" ]; then
-    SPACE_COUNT=$("$HS_CLI" -c "
+    SPACE_COUNT=$(hs_run "$(cat <<'LUA'
 local screen = hs.screen.mainScreen()
 return #hs.spaces.spacesForScreen(screen)
-" 2>/dev/null || echo "error")
-    CURRENT_SPACE=$("$HS_CLI" -c "
+LUA
+    )" 2>/dev/null || echo "error")
+    CURRENT_SPACE=$(hs_run "$(cat <<'LUA'
 local screen = hs.screen.mainScreen()
 local spaces = hs.spaces.spacesForScreen(screen)
 local focused = hs.spaces.focusedSpace()
@@ -159,7 +162,8 @@ for i, sid in ipairs(spaces) do
     if sid == focused then return tostring(i) end
 end
 return '?'
-" 2>/dev/null || echo "error")
+LUA
+    )" 2>/dev/null || echo "error")
 
     if [ "$SPACE_COUNT" != "error" ] && [ "$CURRENT_SPACE" != "error" ]; then
         echo "Hammerspoon working — space $CURRENT_SPACE of $SPACE_COUNT"

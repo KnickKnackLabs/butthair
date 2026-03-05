@@ -76,6 +76,19 @@ if img then return "ok" else return "blocked" end
     fi
 }
 
+# Run Lua code via Hammerspoon CLI.
+#
+# IMPORTANT: When passing Lua as a double-quoted string, bash expands $,
+# backticks, and ! before Lua sees it. For multi-line Lua or code with
+# shell-sensitive characters, use a single-quoted heredoc:
+#
+#   hs_run "$(cat <<'LUA'
+#   local x = some_lua_code()
+#   return x
+#   LUA
+#   )"
+#
+# For simple one-liners with only intentional $VAR interpolation, inline is fine.
 hs_run() {
     local _hs_out _hs_err
     _hs_out=$(mktemp)
