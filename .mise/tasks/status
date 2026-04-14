@@ -5,6 +5,7 @@ TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$TASKS_DIR/_hs"
 
 APP_PATH="/Applications/Hammerspoon.app"
+CONFIG_FILE="$HOME/.hammerspoon/init.lua"
 
 echo "butthair status"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -31,7 +32,7 @@ fi
 # IPC health — this is what catches stale ports
 IPC_OK=false
 if [ -x "$HS_CLI" ]; then
-    RESULT=$(timeout 3 "$HS_CLI" -c "return [[ok]]" 2>/dev/null || echo "")
+    RESULT=$("$HS_CLI" -c "return [[ok]]" 2>/dev/null || echo "")
     if [ "$RESULT" = "ok" ]; then
         IPC_OK=true
         echo "  IPC:           ✓"
@@ -78,10 +79,44 @@ fi
 
 echo ""
 
+# Config
+if [ -f "$CONFIG_FILE" ]; then
+    if grep -q "require.*hs.ipc" "$CONFIG_FILE" 2>/dev/null; then
+        echo "  Config:        ✓ (IPC enabled)"
+    else
+        echo "  Config:        ⚠ (exists but IPC not found)"
+    fi
+else
+    echo "  Config:        ✗ (run: butthair setup)"
+fi
+
+# Animation
+ANIM_KEY="NSAutomaticWindowAnimationsEnabled"
+ANIM_VAL=$(defaults read -g "$ANIM_KEY" 2>/dev/null || echo "missing")
+if [ "$ANIM_VAL" = "0" ]; then
+    echo "  Animation:     off (instant)"
+else
+    echo "  Animation:     on (disable with: defaults write -g $ANIM_KEY -bool false)"
+fi
+
 # Screens
 SCREEN_COUNT=$(hs_run "return #hs.screen.allScreens()" || echo "?")
 MAIN_SCREEN=$(hs_run "return hs.screen.mainScreen():name()" || echo "unknown")
 echo "  Screens:       $SCREEN_COUNT ($MAIN_SCREEN)"
+
+# Spaces
+SPACE_INFO=$(hs_run '
+local screen = hs.screen.mainScreen()
+local spaces = hs.spaces.spacesForScreen(screen)
+local focused = hs.spaces.focusedSpace()
+for i, sid in ipairs(spaces) do
+    if sid == focused then
+        return i .. "/" .. #spaces
+    end
+end
+return "?/" .. #spaces
+' || echo "?")
+echo "  Spaces:        $SPACE_INFO"
 
 # Windows
 WIN_COUNT=$(hs_run "return #hs.window.allWindows()" || echo "?")

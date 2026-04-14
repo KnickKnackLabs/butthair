@@ -8,6 +8,7 @@ set -e
 TASKS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$TASKS_DIR/_hs"
 hs_check
+hs_check_notify
 
 TITLE="${usage_title}"
 MESSAGE="${usage_message:-}"
