@@ -9,23 +9,21 @@ set -euo pipefail
 
 TEST_DIR="$MISE_CONFIG_ROOT/test"
 
-if [ $# -eq 0 ]; then
-  bats "$TEST_DIR/"
-else
-  args=()
-  has_target=false
-  for arg in "$@"; do
-    if [[ "$arg" != -* && "$arg" != *.bats && -f "$TEST_DIR/$arg.bats" ]]; then
-      args+=("$TEST_DIR/$arg.bats")
-      has_target=true
-    else
-      [[ "$arg" == *.bats || -d "$arg" ]] && has_target=true
-      args+=("$arg")
-    fi
-  done
-  # If only flags were passed (e.g. --filter), append the default test dir
-  if ! $has_target; then
-    args+=("$TEST_DIR/")
+args=()
+has_target=false
+
+for arg in "$@"; do
+  if [[ "$arg" != -* && "$arg" != *.bats && -f "$TEST_DIR/$arg.bats" ]]; then
+    args+=("$TEST_DIR/$arg.bats")
+    has_target=true
+  else
+    [[ "$arg" == *.bats || -d "$arg" ]] && has_target=true
+    args+=("$arg")
   fi
-  bats "${args[@]}"
+done
+
+if ! $has_target; then
+  args+=("$TEST_DIR/")
 fi
+
+bats "${args[@]}"
