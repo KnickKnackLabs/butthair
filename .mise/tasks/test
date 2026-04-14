@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
-#MISE description="Run test suite"
-#MISE hide=true
+#MISE description="Run BATS tests"
+#USAGE arg "[files]" var=#true help="Specific test files to run (default: all)"
 set -euo pipefail
 
-bats test/
+ARGS=()
+if [ -n "${usage_files:-}" ]; then
+  while IFS= read -r arg; do
+    ARGS+=("$arg")
+  done < <(printf '%s' "${usage_files}" | xargs printf '%s\n')
+else
+  ARGS=("$MISE_CONFIG_ROOT/test/")
+fi
+
+bats "${ARGS[@]}"
