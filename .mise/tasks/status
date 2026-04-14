@@ -56,10 +56,25 @@ else
     echo "    Accessibility: ✗ (System Settings → Privacy & Security → Accessibility)"
 fi
 
-# Notification permissions can't be detected programmatically — send a visible check
-hs_run 'hs.notify.new({title="butthair", informativeText="Notification check — you should see this"}):send()' &>/dev/null || true
-echo "    Notifications: ? (a notification was just sent — did you see it?)"
-echo "                      If not → System Settings → Notifications → Hammerspoon"
+# Notification check — send hidden test notification, verify delivery, withdraw
+NOTIFY_RESULT=$(hs_run "$(cat <<'LUA'
+local n = hs.notify.new({title="__butthair_test__", informativeText="permission check"}):send()
+hs.timer.usleep(500000)
+local delivered = hs.notify.deliveredNotifications()
+for _, d in ipairs(delivered) do
+    if d:title() == "__butthair_test__" then
+        d:withdraw()
+        return "ok"
+    end
+end
+return "blocked"
+LUA
+)" 2>/dev/null || echo "blocked")
+if [ "$NOTIFY_RESULT" = "ok" ]; then
+    echo "    Notifications: ✓"
+else
+    echo "    Notifications: ✗ (System Settings → Notifications → Hammerspoon)"
+fi
 
 echo ""
 
