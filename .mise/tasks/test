@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+#MISE description="Run test suite"
+#MISE hide=true
+set -euo pipefail
+
+bats test/
