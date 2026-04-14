@@ -1,2 +1,4 @@
 [tools]
 gum = "latest"
+bats = "1.13.0"
+bun = "1"
