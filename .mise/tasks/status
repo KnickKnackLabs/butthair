@@ -46,13 +46,38 @@ if [ "$IPC_OK" = "false" ]; then
     exit 0
 fi
 
-# Accessibility
+# Permissions
+echo ""
+echo "  Permissions"
+
 ACCESS=$(hs_run "return hs.accessibilityState()" || echo "false")
 if [ "$ACCESS" = "true" ]; then
-    echo "  Accessibility: ✓"
+    echo "    Accessibility: ✓"
 else
-    echo "  Accessibility: ✗ (enable in System Settings → Privacy & Security → Accessibility)"
+    echo "    Accessibility: ✗ (System Settings → Privacy & Security → Accessibility)"
 fi
+
+# Notification check — send hidden test notification, verify delivery, withdraw
+NOTIFY_RESULT=$(hs_run "$(cat <<'LUA'
+local n = hs.notify.new({title="__butthair_test__", informativeText="permission check"}):send()
+hs.timer.usleep(500000)
+local delivered = hs.notify.deliveredNotifications()
+for _, d in ipairs(delivered) do
+    if d:title() == "__butthair_test__" then
+        d:withdraw()
+        return "ok"
+    end
+end
+return "blocked"
+LUA
+)" 2>/dev/null || echo "blocked")
+if [ "$NOTIFY_RESULT" = "ok" ]; then
+    echo "    Notifications: ✓"
+else
+    echo "    Notifications: ✗ (System Settings → Notifications → Hammerspoon)"
+fi
+
+echo ""
 
 # Config
 if [ -f "$CONFIG_FILE" ]; then
